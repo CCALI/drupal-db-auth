@@ -43,11 +43,9 @@ function dru_db_auth_activate() {
 	add_option('dru_db_aim',"");
 	add_option('dru_db_yim',"");
 	add_option('dru_db_jabber',"");
-	//add_option('dru_db_enc',"","Type of encoding for Drupal db (default SHA1? or MD5?)");
 	add_option('dru_db_error_msg',"","Custom login message");   
-	//add_option('dru_db_other_enc','$password2 = $password;');
-	add_option('dru_db_role_bool','');
 	add_option('dru_db_role','');
+	add_option('dru_db_role_bool','');
 	add_option('dru_db_role_value','');
 }
 
@@ -71,16 +69,19 @@ function dru_db_auth_init(){
 	register_setting('dru_db_auth','dru_db_yim');
 	register_setting('dru_db_auth','dru_db_jabber');
 	//register_setting('dru_db_auth','dru_db_enc');
-	register_setting('dru_db_auth','dru_db_error_msg');   
 	//register_setting('dru_db_auth','dru_db_other_enc');
+	register_setting('dru_db_auth','dru_db_error_msg');   
 	register_setting('dru_db_auth','dru_db_role');
 	register_setting('dru_db_auth','dru_db_role_bool');
 	register_setting('dru_db_auth','dru_db_role_value');
 }
 
+add_action('admin_menu', 'dru_db_auth_menu');
+
 //page for config menu
-function dru_db_auth_add_menu() {
+function dru_db_auth_menu() {
 	add_options_page("Drupal DB settings", "Drupal DB settings",'manage_options',__FILE__,"dru_db_auth_display_options");
+	add_action('admin_init', 'dru_db_auth_init');
 }
 
 //actual configuration screen
@@ -311,7 +312,7 @@ function dru_db_auth_check_login($username,$password) {
 	$resultutf = db_functions($driver,"query",$resource,$utfquery);  
 
 	//do the password hash for comparing
-	switch(get_option('dru_db_enc')) {
+	/*switch(get_option('dru_db_enc')) {
 		case "SHA1" :
 			$password2 = sha1($password);
 			break;
@@ -321,7 +322,7 @@ function dru_db_auth_check_login($username,$password) {
         case "Other" :             //right now defaulting to plaintext.  People can change code here for their own special hash
             eval(get_option('dru_db_other_enc'));
             break;
-	}
+	}*/
         
    
    //first check to see if login exists in Drupal db
