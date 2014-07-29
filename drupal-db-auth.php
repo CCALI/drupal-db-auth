@@ -43,9 +43,11 @@ function dru_db_auth_activate() {
 	add_option('dru_db_aim',"");
 	add_option('dru_db_yim',"");
 	add_option('dru_db_jabber',"");
+	add_option('dru_db_enc',"","Type of encoding for external db (default SHA1? or MD5?)");
 	add_option('dru_db_error_msg',"","Custom login message");   
-	add_option('dru_db_role','');
+	add_option('dru_db_other_enc','$password2 = $password;');
 	add_option('dru_db_role_bool','');
+	add_option('dru_db_role','');
 	add_option('dru_db_role_value','');
 }
 
@@ -68,20 +70,17 @@ function dru_db_auth_init(){
 	register_setting('dru_db_auth','dru_db_aim');
 	register_setting('dru_db_auth','dru_db_yim');
 	register_setting('dru_db_auth','dru_db_jabber');
-	//register_setting('dru_db_auth','dru_db_enc');
-	//register_setting('dru_db_auth','dru_db_other_enc');
+	register_setting('dru_db_auth','dru_db_enc');
 	register_setting('dru_db_auth','dru_db_error_msg');   
+	register_setting('dru_db_auth','dru_db_other_enc');
 	register_setting('dru_db_auth','dru_db_role');
 	register_setting('dru_db_auth','dru_db_role_bool');
 	register_setting('dru_db_auth','dru_db_role_value');
 }
 
-add_action('admin_menu', 'dru_db_auth_menu');
-
 //page for config menu
-function dru_db_auth_menu() {
-	add_options_page("Drupal DB settings", "Drupal DB settings",'manage_options',__FILE__,"dru_db_auth_display_options");
-	add_action('admin_init', 'dru_db_auth_init');
+function dru_db_auth_add_menu() {
+	add_options_page("Drupal DB settings", "Drupal DB settings", 10, __FILE__,"dru_db_auth_display_options");
 }
 
 //actual configuration screen
@@ -95,7 +94,7 @@ function dru_db_auth_display_options() {
 	<form method="post" action="options.php">
 	<?php settings_fields('dru_db_auth'); ?>
         <h3>Drupal Database Settings</h3>
-          <strong>Make sure your WP admin account exists in the Drupal db prior to saving these settings.</strong>
+          <strong>Make sure your WP admin account exists in the external db prior to saving these settings.</strong>
         <table class="form-table">
         <tr valign="top">
             <th scope="row">Database type</th>
@@ -162,7 +161,33 @@ function dru_db_auth_display_options() {
 				<td><input type="text" name="dru_db_pwfield" value="<?php echo get_option('dru_db_pwfield'); ?>" /></td>
 				<td><span class="description"><strong style="color:red;">required</strong></span><td>
         </tr>
-        
+        <tr valign="top">
+            <th scope="row">Password encryption method</th>
+                <td><select name="dru_db_enc">
+                <?php 
+                    switch(get_option('dru_db_enc')) {
+                    case "SHA1" :
+                        echo '<option selected="selected">SHA1</option><option>MD5</option><option>Other</option>';
+                        break;
+                    case "MD5" :
+                        echo '<option>SHA1</option><option selected="selected">MD5</option><option>Other</option>';
+                        break;                
+                    case "Other" :
+                        echo '<option>SHA1</option><option  selected="selected">MD5</option><option selected="selected">Other</option>';
+                        break;                                        
+                    default :
+                        echo '<option selected="selected">SHA1</option><option>MD5</option><option>Other</option>';
+                        break;
+                    }
+                ?>
+				</select></td>
+			<td><span class="description"><strong style="color:red;">required</strong>; (using "Other" requires you to enter PHP code below!)</td>            
+        </tr>
+        <tr valign="top">
+            <th scope="row"><label>Hash code</label></th>
+				<td><input type="text" name="dru_db_other_enc" size="50" value="<?php echo get_option('dru_db_other_enc'); ?>" /></td>
+				<td><span class="description">Only will run if "Other" is selected and needs to be PHP code. Variable you need to set is $password2, and you have access to (original) $username and $password.</td>
+        </tr>
 		<tr valign="top">
             <th scope="row"><label>Role check</label></th>
 			<td><input type="text" name="dru_db_role" value="<?php echo get_option('dru_db_role'); ?>" />
@@ -186,7 +211,7 @@ function dru_db_auth_display_options() {
                 ?>
 				</select><br />
 				<input type="text" name="dru_db_role_value" value="<?php echo get_option('dru_db_role_value'); ?>" /></td>
-				<td><span class="description">Use this if you have certain user role ids in your Drupal database to further restrict allowed logins.  If unused, leave fields blank.</span></td>
+				<td><span class="description">Use this if you have certain user role ids in your external database to further restrict allowed logins.  If unused, leave fields blank.</span></td>
         </tr>
         <tr valign="top">
             <th scope="row"><label>First name</label></th>
@@ -237,6 +262,7 @@ function dru_db_auth_display_options() {
 	</div>
 <?php
 }
+
 //sort-of wrapper for all DB interactions
 function db_functions($driver,$process,$resource,$query) {
     if ($driver == "MySQL") {	//use built-in PHP mysql connection
@@ -292,8 +318,9 @@ function db_functions($driver,$process,$resource,$query) {
         }
     }
 }
+
 //actual meat of plugin - essentially, you're setting $username and $password to pass on to the system.
-//You check from your Drupal system and insert/update users into the WP system just before WP actually
+//You check from your external system and insert/update users into the WP system just before WP actually
 //authenticates with its own database.
 function dru_db_auth_check_login($username,$password) {
 	require_once('./wp-includes/registration.php');
@@ -312,7 +339,7 @@ function dru_db_auth_check_login($username,$password) {
 	$resultutf = db_functions($driver,"query",$resource,$utfquery);  
 
 	//do the password hash for comparing
-	/*switch(get_option('dru_db_enc')) {
+	switch(get_option('dru_db_enc')) {
 		case "SHA1" :
 			$password2 = sha1($password);
 			break;
@@ -322,10 +349,10 @@ function dru_db_auth_check_login($username,$password) {
         case "Other" :             //right now defaulting to plaintext.  People can change code here for their own special hash
             eval(get_option('dru_db_other_enc'));
             break;
-	}*/
+	}
         
    
-   //first check to see if login exists in Drupal db
+   //first check to see if login exists in external db
    $query = "SELECT count(*) AS numrows FROM " . get_option('dru_db_table') . " WHERE ".get_option('dru_db_namefield')." = '$username'";
    $result = db_functions($driver,"query",$resource,$query);    
    $numrows = db_functions($driver,"fetch",$result,"");
@@ -355,7 +382,7 @@ function dru_db_auth_check_login($username,$password) {
 	    $result = db_functions($driver,"query",$resource,$query);    
         $numrows = db_functions($driver,"numrows",$result,"");         
 		
-		if ($numrows) {    //create/update wp account from Drupal database if login/pw exact match exists in that db		
+		if ($numrows) {    //create/update wp account from external database if login/pw exact match exists in that db		
             $extfields = db_functions($driver,"fetch",$result,""); 
 			$process = TRUE;
 				
@@ -424,9 +451,77 @@ function dru_db_auth_check_login($username,$password) {
 			$username = NULL;
 		}
 	}
-	else {  //don't let login even if it's in the WP db - it needs to come only from the Drupal db.
+	else {  //don't let login even if it's in the WP db - it needs to come only from the external db.
 		global $dru_error;
 		$dru_error = "notindb";
 		$username = NULL;
 	}	     
 }
+
+
+//gives warning for login - where to get "source" login
+function dru_db_auth_warning() {
+   echo "<p class=\"message\">".get_option('dru_db_error_msg')."</p>";
+}
+
+function dru_db_errors() {
+	global $error;
+	global $dru_error;
+	if ($dru_error == "notindb")
+		return "<strong>ERROR:</strong> Username not found.";
+	else if ($dru_error == "wrongrole")
+		return "<strong>ERROR:</strong> You don't have permissions to log in.";
+	else if ($dru_error == "wrongpw")
+		return "<strong>ERROR:</strong> Invalid password.";
+	else
+		return $error;
+}
+
+//hopefully grays stuff out.
+function dru_db_warning() {
+	echo '<strong style="color:red;">Any changes made below WILL NOT be preserved when you login again. You have to change your personal information per instructions found in the <a href="../wp-login.php">login box</a>.</strong>'; 
+}
+
+//disables the (useless) password reset option in WP when this plugin is enabled.
+function dru_db_show_password_fields() {
+	return 0;
+}
+
+
+/*
+ * Disable functions.  Idea taken from http auth plugin.
+ */
+function disable_function_register() {	
+	$errors = new WP_Error();
+	$errors->add('registerdisabled', __('User registration is not available from this site, so you can\'t create an account or retrieve your password from here. See the message above.'));
+	?></form><br /><div id="login_error">User registration is not available from this site, so you can't create an account or retrieve your password from here. See the message above.</div>
+		<p id="backtoblog"><a href="<?php bloginfo('url'); ?>/" title="<?php _e('Are you lost?') ?>"><?php printf(__('&larr; Back to %s'), get_bloginfo('title', 'display' )); ?></a></p>
+	<?php
+	exit();
+}
+
+function disable_function() {	
+	$errors = new WP_Error();
+	$errors->add('registerdisabled', __('User registration is not available from this site, so you can\'t create an account or retrieve your password from here. See the message above.'));
+	login_header(__('Log In'), '', $errors);
+	?>
+	<p id="backtoblog"><a href="<?php bloginfo('url'); ?>/" title="<?php _e('Are you lost?') ?>"><?php printf(__('&larr; Back to %s'), get_bloginfo('title', 'display' )); ?></a></p>
+	<?php
+	exit();
+}
+
+
+add_action('admin_init', 'dru_db_auth_init' );
+add_action('admin_menu', 'dru_db_auth_add_menu');
+add_action('wp_authenticate', 'dru_db_auth_check_login', 1, 2 );
+add_action('lost_password', 'disable_function');
+//add_action('user_register', 'disable_function');
+add_action('register_form', 'disable_function_register');
+add_action('retrieve_password', 'disable_function');
+add_action('password_reset', 'disable_function');
+//add_action('profile_personal_options','dru_db_warning');
+add_filter('login_errors','dru_db_errors');
+add_filter('show_password_fields','dru_db_show_password_fields');
+add_filter('login_message','dru_db_auth_warning');
+
+register_activation_hook( __FILE__, 'dru_db_auth_activate' );
