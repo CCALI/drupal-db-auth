@@ -2,7 +2,7 @@
 /*
 Plugin Name: Drupal DB authentication
 Plugin URI: http://www.cali.org
-Description: Used to Drupally authenticate WP users with an existing Drupal DB.
+Description: Used to Drupally authenticate WP users with an existing Drupal 7 DB.
 Version: 0.1
 Author: Elmer Masters
 Author URI: http://www.cali.org
@@ -39,7 +39,7 @@ function dru_db_auth_activate() {
 	add_option('dru_db',"","Drupal database name");
 	add_option('dru_db_user',"","Drupal database username");
 	add_option('dru_db_pw',"","Drupal database password");
-	add_option('dru_db_table',"","Drupal database table for authentication");
+	add_option('dru_db_table',"u","Drupal database table for authentication");
 	add_option('dru_db_namefield',"","Drupal database field for username");
 	add_option('dru_db_pwfield',"","Drupal database field for password");
 	add_option('dru_db_first_name',"");
@@ -47,12 +47,7 @@ function dru_db_auth_activate() {
 	add_option('dru_db_user_url',"");
 	add_option('dru_db_user_email',"");
 	add_option('dru_db_description',"");
-	//add_option('dru_db_aim',"");
-	//add_option('dru_db_yim',"");
-	//add_option('dru_db_jabber',"");
-	//add_option('dru_db_enc',"","Type of encoding for external db (default SHA1? or MD5?)");
 	add_option('dru_db_error_msg',"","Custom login message");   
-	//add_option('dru_db_other_enc','$password2 = $password;');
 	add_option('dru_db_role_bool','');
 	add_option('dru_db_role','');
 	add_option('dru_db_role_value','');
@@ -74,12 +69,7 @@ function dru_db_auth_init(){
 	register_setting('dru_db_auth','dru_db_user_url');
 	register_setting('dru_db_auth','dru_db_user_email');
 	register_setting('dru_db_auth','dru_db_description');
-	//register_setting('dru_db_auth','dru_db_aim');
-	//register_setting('dru_db_auth','dru_db_yim');
-	//register_setting('dru_db_auth','dru_db_jabber');
-	//register_setting('dru_db_auth','dru_db_enc');
 	register_setting('dru_db_auth','dru_db_error_msg');   
-	//register_setting('dru_db_auth','dru_db_other_enc');
 	register_setting('dru_db_auth','dru_db_role');
 	register_setting('dru_db_auth','dru_db_role_bool');
 	register_setting('dru_db_auth','dru_db_role_value');
@@ -168,33 +158,6 @@ function dru_db_auth_display_options() {
 				<td><input type="text" name="dru_db_pwfield" value="<?php echo get_option('dru_db_pwfield'); ?>" /></td>
 				<td><span class="description"><strong style="color:red;">required</strong></span><td>
         </tr>
-     <!--   <tr valign="top">
-            <th scope="row">Password encryption method</th>
-                <td><select name="dru_db_enc">
-                <?php /*
-                    switch(get_option('dru_db_enc')) {
-                    case "SHA1" :
-                        echo '<option selected="selected">SHA1</option><option>MD5</option><option>Other</option>';
-                        break;
-                    case "MD5" :
-                        echo '<option>SHA1</option><option selected="selected">MD5</option><option>Other</option>';
-                        break;                
-                    case "Other" :
-                        echo '<option>SHA1</option><option  selected="selected">MD5</option><option selected="selected">Other</option>';
-                        break;                                        
-                    default :
-                        echo '<option selected="selected">SHA1</option><option>MD5</option><option>Other</option>';
-                        break;
-                    } */
-                ?>
-				</select></td>
-			<td><span class="description"><strong style="color:red;">required</strong>; (using "Other" requires you to enter PHP code below!)</td>            
-        </tr>
-        <tr valign="top">
-            <th scope="row"><label>Hash code</label></th>
-				<td><input type="text" name="dru_db_other_enc" size="50" value="<?php echo get_option('dru_db_other_enc'); ?>" /></td>
-				<td><span class="description">Only will run if "Other" is selected and needs to be PHP code. Variable you need to set is $password2, and you have access to (original) $username and $password.</td>
-        </tr> -->
 		<tr valign="top">
             <th scope="row"><label>Role check</label></th>
 			<td><input type="text" name="dru_db_role" value="<?php echo get_option('dru_db_role'); ?>" />
@@ -240,18 +203,6 @@ function dru_db_auth_display_options() {
             <th scope="row"><label>Bio/description</label></th>
 			<td><input type="text" name="dru_db_description" value="<?php echo get_option('dru_db_description'); ?>" /></td>
         </tr>
-        <!-- <tr valign="top">
-            <th scope="row"><label>AIM screen name</label></th>
-			<td><input type="text" name="dru_db_aim" value="<?php //echo get_option('dru_db_aim'); ?>" /></td>
-        </tr>
-        <tr valign="top">
-            <th scope="row"><label>YIM screen name</label></th>
-			<td><input type="text" name="dru_db_yim" value="<?php //echo get_option('dru_db_yim'); ?>" /></td>
-        </tr>
-        <tr valign="top">
-            <th scope="row"><label>JABBER screen name</label></th>
-			<td><input type="text" name="dru_db_jabber" value="<?php //echo get_option('dru_db_jabber'); ?>" /></td>
-        </tr> -->
         </table>
         <h3>Other</h3>
         <table class="form-table">
@@ -347,27 +298,6 @@ function dru_db_auth_check_login($username,$password) {
 	//to pick up umlauts, non-latin text, etc., without choking
 	$utfquery = "SET NAMES 'utf8'";
 	$resultutf = db_functions($driver,"query",$resource,$utfquery);  
-
-	//do the password hash for comparing
-	/*switch(get_option('dru_db_enc')) {
-		case "SHA1" :
-			$password2 = sha1($password);
-			break;
-		case "MD5" :
-			$password2 = md5($password);
-			break;			
-        case "Other" :             //right now defaulting to plaintext.  People can change code here for their own special hash
-            eval(get_option('dru_db_other_enc'));
-            break;
-	} */
-	/*
-    $query = "select * from users where name='$name'";
-	$res=$drupaldb->
-	var_dump($res);
-	$account=$res->fetch_object();
-	var_dump($account);
-	$amireal = user_check_password($password, $account);
-     */
    
    //first check to see if login exists in Drupal db
    $query = "SELECT * FROM " . get_option('dru_db_table') . " WHERE ".get_option('dru_db_namefield')." = '$username'";
@@ -381,10 +311,7 @@ function dru_db_auth_check_login($username,$password) {
         // sqlfields['last_name'] = get_option('dru_db_last_name');
         //$sqlfields['user_url'] = get_option('dru_db_user_url');
         $sqlfields['user_email'] = get_option('dru_db_user_email');
-        //$sqlfields['description'] = get_option('dru_db_description');
-        //$sqlfields['aim'] = get_option('dru_db_aim');
-        //$sqlfields['yim'] = get_option('dru_db_yim');
-        //$sqlfields['jabber'] = get_option('dru_db_jabber');	
+        //$sqlfields['description'] = get_option('dru_db_description');	
 		$sqlfields['dru_db_role'] = get_option('dru_db_role');
 		$password2 = $account->pass; 
         foreach($sqlfields as $key=>$value) {				
@@ -444,9 +371,6 @@ function dru_db_auth_check_login($username,$password) {
 				//$userarray['user_url'] = $extfields[$sqlfields['user_url']];
 				$userarray['user_email'] = $extfields[$sqlfields['user_email']];
 				//$userarray['description'] = $extfields[$sqlfields['description']];
-				//$userarray['aim'] = $extfields[$sqlfields['aim']];
-				//$userarray['yim'] = $extfields[$sqlfields['yim']];
-				//$userarray['jabber'] = $extfields[$sqlfields['jabber']];
 				//$userarray['display_name'] = $extfields[$sqlfields['first_name']]." ".$extfields[$sqlfields['last_name']];            
 				
 				//also if no extended data fields
