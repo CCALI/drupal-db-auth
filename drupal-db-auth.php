@@ -3,7 +3,7 @@
 Plugin Name: Drupal DB authentication
 Plugin URI: http://www.cali.org
 Description: Used to Drupally authenticate WP users with an existing Drupal 7 DB.
-Version: 0.1
+Version: 0.2
 Author: Elmer Masters
 Author URI: http://www.cali.org
 Original Author: Charlene Barina
@@ -464,5 +464,6 @@ add_action('password_reset', 'disable_function');
 add_filter('login_errors','dru_db_errors');
 add_filter('show_password_fields','dru_db_show_password_fields');
 add_filter('login_message','dru_db_auth_warning');
-
+// stop password change emails in WP 4.3
+add_filter( 'send_password_change_email', '__return_false'); 
 register_activation_hook( __FILE__, 'dru_db_auth_activate' );
