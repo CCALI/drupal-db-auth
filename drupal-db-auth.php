@@ -223,30 +223,30 @@ function dru_db_auth_display_options() {
 
 //sort-of wrapper for all DB interactions
 function db_functions($driver,$process,$resource,$query) {
-    if ($driver == "MySQL") {	//use built-in PHP mysql connection
+    if ($driver == "MySQL") {	//use built-in PHP mysqli connection
         switch($process) {
             case "connect" :
                 $port = get_option('dru_db_port');                
                 if (!empty($port))   $port = ":".get_option('dru_db_port');
-                $resource = mysql_connect(get_option('dru_host').$port, get_option('dru_db_user'), get_option('dru_db_pw'),true) or die(mysql_error());                
-                mysql_select_db(get_option('dru_db'),$resource) or die(mysql_error());
+                $resource = mysqli_connect(get_option('dru_host').$port, get_option('dru_db_user'), get_option('dru_db_pw')) or die(mysqli_error());                
+                mysqli_select_db($resource,get_option('dru_db')) or die(mysqli_error());
                 return $resource;
                 break;
             case "query":
-                $result = mysql_query($query,$resource) or die(mysql_error());
+                $result = mysqli_query($resource,$query) or die(mysqli_error());
                 return $result;
                 break;            
             case "numrows":
-                return mysql_num_rows($resource);
+                return mysqli_num_rows($resource);
                 break;
             case "fetch":
-                return mysql_fetch_assoc($resource);            
+                return mysqli_fetch_assoc($resource);            
                 break;
             case "fetch_object":
-				return mysql_fetch_object($resource);
+				return mysqli_fetch_object($resource);
 				break;
             case "close":
-                mysql_close($resource);            
+                mysqli_close($resource);            
                 break;
         }
     }
